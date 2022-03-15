@@ -119,7 +119,6 @@ class Model(object):
     self.logits_sub = tf.reshape(self.logits_sub, [-1, predict_ads_num, 1])
     #-- fcn end -------
 
-    
     self.mf_auc = tf.reduce_mean(tf.to_float(pos_neg_diff > 0))
     self.pos_score = tf.sigmoid(pos_item_b + pos_d_output)
     self.neg_score = tf.sigmoid(neg_item_b + neg_d_output)
@@ -128,19 +127,13 @@ class Model(object):
     self.pos_and_neg = tf.concat([self.pos_score, self.neg_score], axis=-1)
     print(self.pos_and_neg.get_shape().as_list())
 
-
     # Step variable
     self.global_step = tf.Variable(0, trainable=False, name='global_step')
-    self.global_epoch_step = \
-        tf.Variable(0, trainable=False, name='global_epoch_step')
-    self.global_epoch_step_op = \
-        tf.assign(self.global_epoch_step, self.global_epoch_step+1)
+    self.global_epoch_step = tf.Variable(0, trainable=False, name='global_epoch_step')
+    self.global_epoch_step_op = tf.assign(self.global_epoch_step, self.global_epoch_step + 1)
 
     self.loss = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=self.logits,
-            labels=self.label)
-        )
+        tf.nn.sigmoid_cross_entropy_with_logits(logits=self.logits, labels=self.label))
 
     trainable_params = tf.trainable_variables()
     self.opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
@@ -152,36 +145,36 @@ class Model(object):
 
   def train(self, sess, uij, l):
     loss, _ = sess.run([self.loss, self.train_op], feed_dict={
-        self.user: uij[0],
-        self.pos_items: uij[1],
-        self.label: uij[2],
-        self.user_items: uij[3],
-        self.seq_len: uij[4],
-        self.lr: l,
-        })
+                                                              self.user: uij[0],
+                                                              self.pos_items: uij[1],
+                                                              self.label: uij[2],
+                                                              self.user_items: uij[3],
+                                                              self.seq_len: uij[4],
+                                                              self.lr: l,
+                                                             })
     return loss
 
 
   def eval(self, sess, uij):
     u_auc, socre_p_and_n = sess.run([self.mf_auc, self.pos_and_neg], feed_dict={
-        self.user: uij[0],
-        self.pos_items: uij[1],
-        self.neg_items: uij[2],
-        self.user_items: uij[3],
-        self.seq_len: uij[4],
-        })
+                                                                                self.user: uij[0],
+                                                                                self.pos_items: uij[1],
+                                                                                self.neg_items: uij[2],
+                                                                                self.user_items: uij[3],
+                                                                                self.seq_len: uij[4],
+                                                                               })
     return u_auc, socre_p_and_n
   
 
   def test(self, sess, uij):
     return sess.run(self.logits_sub, feed_dict={
-        self.user: uij[0],
-        self.pos_items: uij[1],
-        self.neg_items: uij[2],
-        self.user_items: uij[3],
-        self.seq_len: uij[4],
-        })
-  
+                                                self.user: uij[0],
+                                                self.pos_items: uij[1],
+                                                self.neg_items: uij[2],
+                                                self.user_items: uij[3],
+                                                self.seq_len: uij[4],
+                                               })
+
 
   def save(self, sess, path):
     saver = tf.train.Saver()
@@ -191,6 +184,7 @@ class Model(object):
   def restore(self, sess, path):
     saver = tf.train.Saver()
     saver.restore(sess, save_path=path)
+
 
 def extract_axis_1(data, ind):
   batch_range = tf.range(tf.shape(data)[0])
@@ -205,15 +199,17 @@ def attention(queries, keys, keys_length):
     keys:        [B, T, H]
     keys_length: [B]
   '''
-  queries_hidden_units = queries.get_shape().as_list()[-1]
-  queries = tf.tile(queries, [1, tf.shape(keys)[1]])
-  queries = tf.reshape(queries, [-1, tf.shape(keys)[1], queries_hidden_units])
+  
+  queries_hidden_units = queries.get_shape().as_list()[-1] # H
+  queries = tf.tile(queries, [1, tf.shape(keys)[1]]) # [B, T*H]
+  queries = tf.reshape(queries, [-1, tf.shape(keys)[1], queries_hidden_units]) # [B, T, H]
+
   din_all = tf.concat([queries, keys, queries-keys, queries*keys], axis=-1)
-  d_layer_1_all = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1_att', reuse=tf.AUTO_REUSE)
-  d_layer_2_all = tf.layers.dense(d_layer_1_all, 40, activation=tf.nn.sigmoid, name='f2_att', reuse=tf.AUTO_REUSE)
-  d_layer_3_all = tf.layers.dense(d_layer_2_all, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE)
-  d_layer_3_all = tf.reshape(d_layer_3_all, [-1, 1, tf.shape(keys)[1]])
-  outputs = d_layer_3_all 
+  d_all_layer_1 = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1_att', reuse=tf.AUTO_REUSE)
+  d_all_layer_2 = tf.layers.dense(d_all_layer_1, 40, activation=tf.nn.sigmoid, name='f2_att', reuse=tf.AUTO_REUSE)
+  d_all_layer_output = tf.layers.dense(d_all_layer_2, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE)
+  outputs = tf.reshape(d_all_layer_output, [-1, 1, tf.shape(keys)[1]]) # [B, 1, T]
+
   # Mask
   key_masks = tf.sequence_mask(keys_length, tf.shape(keys)[1])   # [B, T]
   key_masks = tf.expand_dims(key_masks, 1) # [B, 1, T]
@@ -222,10 +218,8 @@ def attention(queries, keys, keys_length):
 
   # Scale
   outputs = outputs / (keys.get_shape().as_list()[-1] ** 0.5)
-
   # Activation
   outputs = tf.nn.softmax(outputs)  # [B, 1, T]
-
   # Weighted sum
   outputs = tf.matmul(outputs, keys)  # [B, 1, H]
 
@@ -238,19 +232,22 @@ def attention_multi_items(queries, keys, keys_length):
     keys:        [B, T, H] 
     keys_length: [B]
   '''
-  queries_hidden_units = queries.get_shape().as_list()[-1]
-  queries_nums = queries.get_shape().as_list()[1]
-  queries = tf.tile(queries, [1, 1, tf.shape(keys)[1]])
+
+  queries_hidden_units = queries.get_shape().as_list()[-1] # H
+  queries_nums = queries.get_shape().as_list()[1] # N
+  queries = tf.tile(queries, [1, 1, tf.shape(keys)[1]]) # [B, N, H*T]
   queries = tf.reshape(queries, [-1, queries_nums, tf.shape(keys)[1], queries_hidden_units]) # shape : [B, N, T, H]
-  max_len = tf.shape(keys)[1]
-  keys = tf.tile(keys, [1, queries_nums, 1])
+  
+  max_len = tf.shape(keys)[1] # T
+  keys = tf.tile(keys, [1, queries_nums, 1]) # [B, T*N, H]
   keys = tf.reshape(keys, [-1, queries_nums, max_len, queries_hidden_units]) # shape : [B, N, T, H]
+  
   din_all = tf.concat([queries, keys, queries-keys, queries*keys], axis=-1)
-  d_layer_1_all = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1_att', reuse=tf.AUTO_REUSE)
-  d_layer_2_all = tf.layers.dense(d_layer_1_all, 40, activation=tf.nn.sigmoid, name='f2_att', reuse=tf.AUTO_REUSE)
-  d_layer_3_all = tf.layers.dense(d_layer_2_all, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE)
-  d_layer_3_all = tf.reshape(d_layer_3_all, [-1, queries_nums, 1, max_len])
-  outputs = d_layer_3_all 
+  d_all_layer_1 = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1_att', reuse=tf.AUTO_REUSE)
+  d_all_layer_2 = tf.layers.dense(d_all_layer_1, 40, activation=tf.nn.sigmoid, name='f2_att', reuse=tf.AUTO_REUSE)
+  d_all_layer_output = tf.layers.dense(d_all_layer_2, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE)
+  outputs = tf.reshape(d_all_layer_output, [-1, queries_nums, 1, max_len]) # [B, N, 1, T]
+
   # Mask
   key_masks = tf.sequence_mask(keys_length, max_len)   # [B, T]
   key_masks = tf.tile(key_masks, [1, queries_nums])
@@ -260,15 +257,13 @@ def attention_multi_items(queries, keys, keys_length):
 
   # Scale
   outputs = outputs / (keys.get_shape().as_list()[-1] ** 0.5)
-
   # Activation
   outputs = tf.nn.softmax(outputs)  # [B, N, 1, T]
-  outputs = tf.reshape(outputs, [-1, 1, max_len])
-  keys = tf.reshape(keys, [-1, max_len, queries_hidden_units])
-  #print outputs.get_shape().as_list()
-  #print keys.get_sahpe().as_list()
+  outputs = tf.reshape(outputs, [-1, 1, max_len]) # [B, N, 1, T]
+
+  keys = tf.reshape(keys, [-1, max_len, queries_hidden_units]) # [B, N, T, H]
   # Weighted sum
-  outputs = tf.matmul(outputs, keys)
+  outputs = tf.matmul(outputs, keys) # [B, N, 1, H]
   outputs = tf.reshape(outputs, [-1, queries_nums, queries_hidden_units])  # [B, N, 1, H]
-  print(outputs.get_shape().as_list())
+
   return outputs
