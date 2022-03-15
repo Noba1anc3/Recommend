@@ -195,8 +195,8 @@ def extract_axis_1(data, ind):
 
 def attention(queries, keys, keys_length):
   '''
-    queries:     [B, H]
-    keys:        [B, T, H]
+    queries:     [B, H]       item embeddings
+    keys:        [B, T, H]    user behavior embeddings
     keys_length: [B]
   '''
   
@@ -204,10 +204,10 @@ def attention(queries, keys, keys_length):
   queries = tf.tile(queries, [1, tf.shape(keys)[1]]) # [B, T*H]
   queries = tf.reshape(queries, [-1, tf.shape(keys)[1], queries_hidden_units]) # [B, T, H]
 
-  din_all = tf.concat([queries, keys, queries-keys, queries*keys], axis=-1)
+  din_all = tf.concat([queries, keys, queries-keys, queries*keys], axis=-1) # [B, T, H*4]
   d_all_layer_1 = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1_att', reuse=tf.AUTO_REUSE)
   d_all_layer_2 = tf.layers.dense(d_all_layer_1, 40, activation=tf.nn.sigmoid, name='f2_att', reuse=tf.AUTO_REUSE)
-  d_all_layer_output = tf.layers.dense(d_all_layer_2, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE)
+  d_all_layer_output = tf.layers.dense(d_all_layer_2, 1, activation=None, name='f3_att', reuse=tf.AUTO_REUSE) # [B, T, 1]
   outputs = tf.reshape(d_all_layer_output, [-1, 1, tf.shape(keys)[1]]) # [B, 1, T]
 
   # Mask
@@ -250,7 +250,7 @@ def attention_multi_items(queries, keys, keys_length):
 
   # Mask
   key_masks = tf.sequence_mask(keys_length, max_len)   # [B, T]
-  key_masks = tf.tile(key_masks, [1, queries_nums])
+  key_masks = tf.tile(key_masks, [1, queries_nums]) # [B, N*T]
   key_masks = tf.reshape(key_masks, [-1, queries_nums, 1, max_len]) # shape : [B, N, 1, T]
   paddings = tf.ones_like(outputs) * (-2 ** 32 + 1)
   outputs = tf.where(key_masks, outputs, paddings)  # [B, N, 1, T]

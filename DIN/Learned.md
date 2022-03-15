@@ -102,5 +102,12 @@ self.train_op = self.opt.apply_gradients(zip(clip_gradients, trainable_params), 
 
 # self.opt.apply_gradients(grads_and_vars, global_step)
 
+key_masks = tf.sequence_mask(keys_length, max_len)   # [B, T]
+# tf.sequence_mask(lengths, max_len) apply for padding
+# lengths: integer tensor, all its value <= max_len
+# maxlen: scalar integer tensor, size of last dimension of returned tensor, default is the max value of lengths
+
+if model.global_step.eval() % 1000 == 0:
+# variable.eval() compute and return the value of variable
 ```
 
