@@ -16,7 +16,7 @@ tf.set_random_seed(1234)
 train_batch_size = 32
 test_batch_size = 512
 
-with open('dataset.pkl', 'rb') as f:
+with open('../din/dataset.pkl', 'rb') as f:
   train_set = pickle.load(f)
   test_set = pickle.load(f)
   cate_list = pickle.load(f)
@@ -66,6 +66,7 @@ def _auc_arr(score):
   for s in score_n.tolist():
     score_arr.append([1, 0, s])
   return score_arr
+
 def _eval(sess, model):
   auc_sum = 0.0
   score_arr = []
@@ -84,7 +85,6 @@ def _eval(sess, model):
 
 gpu_options = tf.GPUOptions(allow_growth=True)
 with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-
   model = Model(user_count, item_count, cate_count, cate_list)
   sess.run(tf.global_variables_initializer())
   sess.run(tf.local_variables_initializer())

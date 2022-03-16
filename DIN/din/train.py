@@ -66,7 +66,7 @@ def _eval(sess, model):
   score_arr = []
 
   for i, (_, uij) in enumerate(DataInputTest(test_set, test_batch_size)):
-    print(i, round(len(test_set) / test_batch_size))
+    # print(i, round(len(test_set) / test_batch_size))
     auc_, score_ = model.eval(sess, uij)
     score_arr += _auc_arr(score_)
     auc_sum += auc_ * len(uij[0])
