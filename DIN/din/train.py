@@ -51,7 +51,7 @@ def calc_auc(raw_arr):
     else:
         return None
 
-def _auc_arr(score):
+def _auc_arr(score): # [0, 1, score_pos]*Batchsize + [1, 0, score_neg]*Batchsize
   score_p = score[:,0]
   score_n = score[:,1]
   score_arr = []
@@ -65,7 +65,8 @@ def _eval(sess, model):
   auc_sum = 0.0
   score_arr = []
 
-  for _, uij in DataInputTest(test_set, test_batch_size):
+  for i, (_, uij) in enumerate(DataInputTest(test_set, test_batch_size)):
+    print(i, round(len(test_set) / test_batch_size))
     auc_, score_ = model.eval(sess, uij)
     score_arr += _auc_arr(score_)
     auc_sum += auc_ * len(uij[0])

@@ -62,8 +62,8 @@ class Model(object):
 
     pos_user_items_cates_attention = attention(pos_items_cates_emb, user_items_cates_emb, self.seq_len) # [B, 1, H]
     pos_user_items_cates_attention = tf.layers.batch_normalization(inputs = pos_user_items_cates_attention)
-    pos_user_items_cates_attention = tf.reshape(pos_user_items_cates_attention, [-1, hidden_units], name='pos_uic_bn') # [B, H]
-    pos_user_items_cates_attention = tf.layers.dense(pos_user_items_cates_attention, hidden_units, name='pos_uic_fcn') # [B, H]
+    pos_user_items_cates_attention = tf.reshape(pos_user_items_cates_attention, [-1, hidden_units], name='hist_bn') # [B, H]
+    pos_user_items_cates_attention = tf.layers.dense(pos_user_items_cates_attention, hidden_units, name='hist_fcn') # [B, H]
 
     neg_user_items_cates_attention = attention(neg_items_cates_emb, user_items_cates_emb, self.seq_len)
     # neg_user_items_cates_attention = tf.layers.batch_normalization(inputs = neg_user_items_cates_attention)
@@ -159,7 +159,7 @@ class Model(object):
 
   def train(self, sess, uij, l):
     loss, _ = sess.run([self.loss, self.train_op], feed_dict={
-                                                              self.user: uij[0],
+                                                              self.users: uij[0],
                                                               self.pos_items: uij[1],
                                                               self.label: uij[2],
                                                               self.user_items: uij[3],
@@ -171,7 +171,7 @@ class Model(object):
 
   def eval(self, sess, uij):
     u_auc, socre_p_and_n = sess.run([self.mf_auc, self.pos_and_neg], feed_dict={
-                                                                                self.user: uij[0],
+                                                                                self.users: uij[0],
                                                                                 self.pos_items: uij[1],
                                                                                 self.neg_items: uij[2],
                                                                                 self.user_items: uij[3],
@@ -182,7 +182,7 @@ class Model(object):
 
   def test(self, sess, uij):
     return sess.run(self.logits_sub, feed_dict={
-                                                self.user: uij[0],
+                                                self.users: uij[0],
                                                 self.pos_items: uij[1],
                                                 self.neg_items: uij[2],
                                                 self.user_items: uij[3],
