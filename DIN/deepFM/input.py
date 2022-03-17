@@ -2,7 +2,6 @@ import numpy as np
 
 class DataInput:
   def __init__(self, data, batch_size):
-
     self.batch_size = batch_size
     self.data = data
     self.epoch_size = len(self.data) // self.batch_size
@@ -13,36 +12,34 @@ class DataInput:
   def __iter__(self):
     return self
 
-  def next(self):
-
+  def __next__(self):
     if self.i == self.epoch_size:
       raise StopIteration
 
-    ts = self.data[self.i * self.batch_size : min((self.i+1) * self.batch_size,
-                                                  len(self.data))]
+    batch_data = self.data[self.i * self.batch_size : min((self.i+1) * self.batch_size, len(self.data))]
     self.i += 1
 
-    u, i, y, sl = [], [], [], []
-    for t in ts:
-      u.append(t[0])
-      i.append(t[2])
-      y.append(t[3])
-      sl.append(len(t[1]))
-    max_sl = max(sl)
+    user, pos_item, label, seq_length = [], [], [], []
+    for data in batch_data:
+      user.append(data[0])
+      pos_item.append(data[1])
+      label.append(data[4])
+      seq_length.append(data[3])
 
-    hist_i = np.zeros([len(ts), max_sl], np.int64)
+    max_seq_len = max(seq_length)
+    user_items = np.zeros([len(batch_data), max_seq_len], np.int64)
 
     k = 0
-    for t in ts:
-      for l in range(len(t[1])):
-        hist_i[k][l] = t[1][l]
+    for data in batch_data:
+      for item_idx in range(data[3]):
+        user_items[k][item_idx] = data[2][item_idx]
       k += 1
 
-    return self.i, (u, i, y, hist_i, sl)
+    return self.i, (user, pos_item, label, user_items, seq_length)
+
 
 class DataInputTest:
   def __init__(self, data, batch_size):
-
     self.batch_size = batch_size
     self.data = data
     self.epoch_size = len(self.data) // self.batch_size
@@ -53,29 +50,27 @@ class DataInputTest:
   def __iter__(self):
     return self
 
-  def next(self):
-
+  def __next__(self):
     if self.i == self.epoch_size:
       raise StopIteration
 
-    ts = self.data[self.i * self.batch_size : min((self.i+1) * self.batch_size,
-                                                  len(self.data))]
+    batch_data = self.data[self.i * self.batch_size : min((self.i+1) * self.batch_size, len(self.data))]
     self.i += 1
 
-    u, i, j, sl = [], [], [], []
-    for t in ts:
-      u.append(t[0])
-      i.append(t[2][0])
-      j.append(t[2][1])
-      sl.append(len(t[1]))
-    max_sl = max(sl)
+    user, pos_item, neg_item, seq_len = [], [], [], []
+    for data in batch_data:
+      user.append(data[0])
+      pos_item.append(data[1][0])
+      neg_item.append(data[1][1])
+      seq_len.append(data[3])
 
-    hist_i = np.zeros([len(ts), max_sl], np.int64)
+    max_sl = max(seq_len)
+    user_items = np.zeros([len(batch_data), max_sl], np.int64)
 
     k = 0
-    for t in ts:
-      for l in range(len(t[1])):
-        hist_i[k][l] = t[1][l]
+    for data in batch_data:
+      for item_idx in range(data[3]):
+        user_items[k][item_idx] = data[2][item_idx]
       k += 1
 
-    return self.i, (u, i, j, hist_i, sl)
+    return self.i, (user, pos_item, neg_item, user_items, seq_len)

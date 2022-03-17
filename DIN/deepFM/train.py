@@ -15,6 +15,8 @@ tf.set_random_seed(1234)
 
 train_batch_size = 32
 test_batch_size = 512
+lr = 1e-3
+epochs = 50
 
 with open('dataset.pkl', 'rb') as f:
   train_set = pickle.load(f)
@@ -23,15 +25,8 @@ with open('dataset.pkl', 'rb') as f:
   user_count, item_count, cate_count = pickle.load(f)
 
 best_auc = 0.0
+
 def calc_auc(raw_arr):
-    """Summary
-
-    Args:
-        raw_arr (TYPE): Description
-
-    Returns:
-        TYPE: Description
-    """
     # sort by pred value, from small to big
     arr = sorted(raw_arr, key=lambda d:d[2])
 
@@ -53,28 +48,29 @@ def calc_auc(raw_arr):
     else:
         return None
 
-def _auc_arr(score):
+def _auc_arr(score): # [0, 1, score_pos]*Batchsize + [1, 0, score_neg]*Batchsize
   score_p = score[:,0]
   score_n = score[:,1]
-  #print "============== p ============="
-  #print score_p
-  #print "============== n ============="
-  #print score_n
   score_arr = []
   for s in score_p.tolist():
     score_arr.append([0, 1, s])
   for s in score_n.tolist():
     score_arr.append([1, 0, s])
   return score_arr
+
 def _eval(sess, model):
   auc_sum = 0.0
   score_arr = []
-  for _, uij in DataInputTest(test_set, test_batch_size):
+
+  for i, (_, uij) in enumerate(DataInputTest(test_set, test_batch_size)):
+    # print(i, round(len(test_set) / test_batch_size))
     auc_, score_ = model.eval(sess, uij)
     score_arr += _auc_arr(score_)
     auc_sum += auc_ * len(uij[0])
+
   test_gauc = auc_sum / len(test_set)
   Auc = calc_auc(score_arr)
+
   global best_auc
   if best_auc < test_gauc:
     best_auc = test_gauc
@@ -84,21 +80,19 @@ def _eval(sess, model):
 
 gpu_options = tf.GPUOptions(allow_growth=True)
 with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-
   model = Model(user_count, item_count, cate_count, cate_list)
   sess.run(tf.global_variables_initializer())
   sess.run(tf.local_variables_initializer())
 
   print('test_gauc: %.4f\t test_auc: %.4f' % _eval(sess, model))
   sys.stdout.flush()
-  lr = 0.001
+
   start_time = time.time()
-  for _ in range(50):
-
+  for _ in range(epochs):
     random.shuffle(train_set)
-
     epoch_size = round(len(train_set) / train_batch_size)
     loss_sum = 0.0
+
     for _, uij in DataInput(train_set, train_batch_size):
       loss = model.train(sess, uij, lr)
       loss_sum += loss

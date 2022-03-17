@@ -5,6 +5,26 @@ from tensorflow.python.ops.rnn_cell import LSTMCell
 from tensorflow.python.ops.rnn_cell import MultiRNNCell
 
 class Model(object):
+  # cate_list, self.hist_i -> hc
+  # item_emb_w, self.hist_i, cate_emb_w, hc -> h_emb
+
+  # cate_list, self.i -> ic
+  # item_emb_w, self.i, cate_emb_w, ic -> i_emb
+
+  # cate_list, self.j -> jc
+  # item_emb_w, self.j, cate_emb_w, jc -> j_emb
+
+  # self.sl, h_emb -> u_emb -> u_emb_all
+
+  # u_emb, i_emb -> d_layer_3_i
+  # u_emb, j_emb -> d_layer_3_j
+
+  # d_layer_3_i, i_b -> self.logits
+
+  # item_emb_w, cate_list, cate_emb_w -> all_emb
+  # u_emb_all, all_emb -> din_all -> d_layer_3_all
+  # item_b, d_layer_3_all -> self.logits_all
+
   def __init__(self, user_count, item_count, cate_count, cate_list):
     self.u = tf.placeholder(tf.int32, [None,]) # [B]
     self.i = tf.placeholder(tf.int32, [None,]) # [B]
@@ -50,11 +70,9 @@ class Model(object):
     mask = tf.expand_dims(mask, -1) # [B, T, 1]
     mask = tf.tile(mask, [1, 1, tf.shape(h_emb)[2]]) # [B, T, H]
 
-    h_emb *= mask # [B, T, H]
-    hist = h_emb
+    hist = h_emb * mask
     hist = tf.reduce_sum(hist, 1) # [B, H]
-    hist = tf.div(hist, tf.cast(tf.tile(tf.expand_dims(self.sl,1), [1,128]), tf.float32)) # [B, H]
-    print(h_emb.get_shape().as_list())
+    hist = tf.div(hist, tf.cast(tf.tile(tf.expand_dims(self.sl,1), [1,tf.shape(h_emb)[2]]), tf.float32)) # [B, H]
     #-- sum end ---------
     
     hist = tf.layers.batch_normalization(inputs = hist)
@@ -68,17 +86,22 @@ class Model(object):
     d_layer_1_i = tf.layers.dense(din_i, 80, activation=tf.nn.sigmoid, name='f1') # [B, 80]
     d_layer_2_i = tf.layers.dense(d_layer_1_i, 40, activation=tf.nn.sigmoid, name='f2') # [B, 40]
     d_layer_3_i = tf.layers.dense(d_layer_2_i, 1, activation=None, name='f3') # [B, 1]
+    
     din_j = tf.concat([u_emb, j_emb], axis=-1) # [B, 2H]
     din_j = tf.layers.batch_normalization(inputs=din_j, name='b1', reuse=True)
     d_layer_1_j = tf.layers.dense(din_j, 80, activation=tf.nn.sigmoid, name='f1', reuse=True)
     d_layer_2_j = tf.layers.dense(d_layer_1_j, 40, activation=tf.nn.sigmoid, name='f2', reuse=True)
     d_layer_3_j = tf.layers.dense(d_layer_2_j, 1, activation=None, name='f3', reuse=True)
+    
     d_layer_3_i = tf.reshape(d_layer_3_i, [-1]) # [B]
     d_layer_3_j = tf.reshape(d_layer_3_j, [-1]) # [B]
+
     x = i_b - j_b + d_layer_3_i - d_layer_3_j # [B]
     self.logits = i_b + d_layer_3_i
+    
     u_emb_all = tf.expand_dims(u_emb, 1) # [B, 1, H]
     u_emb_all = tf.tile(u_emb_all, [1, item_count, 1]) # [B, I, H]
+    
     # logits for all item:
     all_emb = tf.concat([ # [I, H]
         item_emb_w, # [I, H/2]
@@ -86,6 +109,7 @@ class Model(object):
         ], axis=1)
     all_emb = tf.expand_dims(all_emb, 0) # [1, I, H]
     all_emb = tf.tile(all_emb, [512, 1, 1]) # [B, I, H]
+
     din_all = tf.concat([u_emb_all, all_emb], axis=-1) # [B, I, 2H]
     din_all = tf.layers.batch_normalization(inputs=din_all, name='b1', reuse=True)
     d_layer_1_all = tf.layers.dense(din_all, 80, activation=tf.nn.sigmoid, name='f1', reuse=True)
@@ -95,15 +119,12 @@ class Model(object):
     self.logits_all = tf.sigmoid(item_b + d_layer_3_all) # [B, I]
     #-- fcn end -------
 
-    
     self.mf_auc = tf.reduce_mean(tf.to_float(x > 0))
     self.score_i = tf.sigmoid(i_b + d_layer_3_i) # [B]
     self.score_j = tf.sigmoid(j_b + d_layer_3_j) # [B]
     self.score_i = tf.reshape(self.score_i, [-1, 1]) # [B, 1]
     self.score_j = tf.reshape(self.score_j, [-1, 1]) # [B, 1]
     self.p_and_n = tf.concat([self.score_i, self.score_j], axis=-1) # [B, 2]
-    print(self.p_and_n.get_shape().as_list())
-
 
     # Step variable
     self.global_step = tf.Variable(0, trainable=False, name='global_step')

@@ -5,6 +5,9 @@ totalMemory: 15.89GiB freeMemory: 14.75GiB
 2018-01-09 15:41:59.022607: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1120] Creating TensorFlow device (/device:GPU:0) -> (device: 0, name: Tesla P100-PCIE-16GB, pci bus id: 0000:04:00.0, compute capability: 6.0)
 [None, None, 128]
 [None, 2]
+
+Epoch 9 Global_step 814000	Train_loss: 0.3871	Eval_GAUC: 0.8624	Eval_AUC: 0.8643
+
 test_gauc: 0.5018	 test_auc: 0.5003
 Epoch 0 Global_step 1000	Train_loss: 0.6960	Eval_GAUC: 0.6700	Eval_AUC: 0.6703
 Epoch 0 Global_step 2000	Train_loss: 0.6847	Eval_GAUC: 0.6982	Eval_AUC: 0.6981

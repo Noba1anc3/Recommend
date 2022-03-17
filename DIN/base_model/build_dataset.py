@@ -10,23 +10,28 @@ with open('../raw_data/remap.pkl', 'rb') as f:
 
 train_set = []
 test_set = []
+
+max_seq_length = 0
 for reviewerID, hist in reviews_df.groupby('reviewerID'):
   pos_list = hist['asin'].tolist()
+  max_seq_length = max(max_seq_length, len(pos_list))
+
   def gen_neg():
-    neg = pos_list[0]
+    neg = pos_list[0] 
     while neg in pos_list:
       neg = random.randint(0, item_count-1)
     return neg
+
   neg_list = [gen_neg() for i in range(len(pos_list))]
 
   for i in range(1, len(pos_list)):
     hist = pos_list[:i]
     if i != len(pos_list) - 1:
-      train_set.append((reviewerID, hist, pos_list[i], 1))
-      train_set.append((reviewerID, hist, neg_list[i], 0))
+      train_set.append((reviewerID, pos_list[i], hist, len(hist), 1))
+      train_set.append((reviewerID, neg_list[i], hist, len(hist), 0))
     else:
       label = (pos_list[i], neg_list[i])
-      test_set.append((reviewerID, hist, label))
+      test_set.append((reviewerID, label, hist, len(hist)))
 
 random.shuffle(train_set)
 random.shuffle(test_set)
