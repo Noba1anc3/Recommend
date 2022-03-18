@@ -60,20 +60,20 @@ class Model(object):
                                     tf.nn.embedding_lookup(cate_emb_w, user_items_cates), # [B, T, H/2]
                                    ], axis=2)
 
-    pos_user_items_cates_attention = attention(pos_items_cates_emb, user_items_cates_emb, self.seq_len) # [B, 1, H]
-    pos_user_items_cates_attention = tf.layers.batch_normalization(inputs = pos_user_items_cates_attention)
-    pos_user_items_cates_attention = tf.reshape(pos_user_items_cates_attention, [-1, hidden_units], name='hist_bn') # [B, H]
-    pos_user_items_cates_attention = tf.layers.dense(pos_user_items_cates_attention, hidden_units, name='hist_fcn') # [B, H]
+    user_items_cates_att_wrt_pos = attention(pos_items_cates_emb, user_items_cates_emb, self.seq_len) # [B, 1, H]
+    user_items_cates_att_wrt_pos = tf.layers.batch_normalization(inputs = user_items_cates_att_wrt_pos)
+    user_items_cates_att_wrt_pos = tf.reshape(user_items_cates_att_wrt_pos, [-1, hidden_units], name='hist_bn') # [B, H]
+    user_items_cates_att_wrt_pos = tf.layers.dense(user_items_cates_att_wrt_pos, hidden_units, name='hist_fcn') # [B, H]
 
-    neg_user_items_cates_attention = attention(neg_items_cates_emb, user_items_cates_emb, self.seq_len)
-    # neg_user_items_cates_attention = tf.layers.batch_normalization(inputs = neg_user_items_cates_attention)
-    neg_user_items_cates_attention = tf.layers.batch_normalization(inputs = neg_user_items_cates_attention, reuse = True)
-    neg_user_items_cates_attention = tf.reshape(neg_user_items_cates_attention, [-1, hidden_units], name='hist_bn') # [B, H]
-    neg_user_items_cates_attention = tf.layers.dense(neg_user_items_cates_attention, hidden_units, name='hist_fcn', reuse=True)
+    user_items_cates_att_wrt_neg = attention(neg_items_cates_emb, user_items_cates_emb, self.seq_len)
+    # user_items_cates_att_wrt_neg = tf.layers.batch_normalization(inputs = user_items_cates_att_wrt_neg)
+    user_items_cates_att_wrt_neg = tf.layers.batch_normalization(inputs = user_items_cates_att_wrt_neg, reuse = True)
+    user_items_cates_att_wrt_neg = tf.reshape(user_items_cates_att_wrt_neg, [-1, hidden_units], name='hist_bn') # [B, H]
+    user_items_cates_att_wrt_neg = tf.layers.dense(user_items_cates_att_wrt_neg, hidden_units, name='hist_fcn', reuse=True)
 
     # -- fcn begin -------
-    pos_din = tf.concat([pos_user_items_cates_attention, pos_items_cates_emb, 
-                          pos_user_items_cates_attention * pos_items_cates_emb], axis=-1) # [B, 3H]
+    pos_din = tf.concat([user_items_cates_att_wrt_pos, pos_items_cates_emb, 
+                          user_items_cates_att_wrt_pos * pos_items_cates_emb], axis=-1) # [B, 3H]
     pos_din = tf.layers.batch_normalization(inputs=pos_din, name='b1')
  
     pos_din_layer_1 = tf.layers.dense(pos_din, 80, activation=tf.nn.sigmoid, name='f1') # [B, 80]
@@ -85,8 +85,8 @@ class Model(object):
     # pos_din_layer_2 = dice(pos_din_layer_2, name='dice_2_i')
     pos_din_output = tf.layers.dense(pos_din_layer_2, 1, activation=None, name='f3') # [B, 1]
 
-    neg_din = tf.concat([neg_user_items_cates_attention, neg_items_cates_emb, 
-                          neg_user_items_cates_attention * neg_items_cates_emb], axis=-1) # [B, 3H]
+    neg_din = tf.concat([user_items_cates_att_wrt_neg, neg_items_cates_emb, 
+                          user_items_cates_att_wrt_neg * neg_items_cates_emb], axis=-1) # [B, 3H]
     neg_din = tf.layers.batch_normalization(inputs=neg_din, name='b1', reuse=True)
 
     neg_din_layer_1 = tf.layers.dense(neg_din, 80, activation=tf.nn.sigmoid, name='f1', reuse=True)
@@ -106,23 +106,23 @@ class Model(object):
     # prediciton for selected items
     # logits for selected item:
     items_cates_emb = tf.concat([ # [I, H]
-                                item_emb_w,
-                                tf.nn.embedding_lookup(cate_emb_w, cate_list)
-                              ], axis=1)
-    ads_cates_emb = items_cates_emb[:predict_ads_num, :] # [Ads, H]
-    ads_cates_emb = tf.expand_dims(ads_cates_emb, 0) # [1, Ads, H]
-    ads_cates_emb = tf.tile(ads_cates_emb, [predict_batch_size, 1, 1]) # [B, Ads, H]
+                                  item_emb_w,
+                                  tf.nn.embedding_lookup(cate_emb_w, cate_list)
+                                ], axis=1)
+    ads_items_cates_emb = items_cates_emb[:predict_ads_num, :] # [Ads, H]
+    ads_items_cates_emb = tf.expand_dims(ads_items_cates_emb, 0) # [1, Ads, H]
+    ads_items_cates_emb = tf.tile(ads_items_cates_emb, [predict_batch_size, 1, 1]) # [B, Ads, H]
 
-    user_ads_cates_attention = attention_multi_items(ads_cates_emb, user_items_cates_emb, self.seq_len) # [B, Ads, H]
-    user_ads_cates_attention = tf.layers.batch_normalization(inputs = user_ads_cates_attention, name='hist_bn', reuse=tf.AUTO_REUSE)
-    # print user_sub.get_shape().as_list() 
-    user_ads_cates_attention = tf.reshape(user_ads_cates_attention, [-1, hidden_units]) # [B*Ads, H]
-    user_ads_cates_attention = tf.layers.dense(user_ads_cates_attention, hidden_units, name='hist_fcn', reuse=tf.AUTO_REUSE) # [B*Ads, H]
+    user_items_cates_att_wrt_ads = attention_multi_items(ads_items_cates_emb, user_items_cates_emb, self.seq_len) # [B, Ads, H]
+    user_items_cates_att_wrt_ads = tf.layers.batch_normalization(user_items_cates_att_wrt_ads, name='hist_bn', reuse=tf.AUTO_REUSE)
+    user_items_cates_att_wrt_ads = tf.reshape(user_items_cates_att_wrt_ads, [-1, hidden_units]) # [B*Ads, H]
+    user_items_cates_att_wrt_ads = tf.layers.dense(user_items_cates_att_wrt_ads, hidden_units, name='hist_fcn', reuse=tf.AUTO_REUSE) # [B*Ads, H]
 
-    ads_cates_emb = tf.reshape(ads_cates_emb, [-1, hidden_units]) # [B*Ads, H]
-    ads_din = tf.concat([user_ads_cates_attention, ads_cates_emb, 
-                              user_ads_cates_attention * ads_cates_emb], axis=-1) # [B*Ads, 3H]
+    ads_items_cates_emb = tf.reshape(ads_items_cates_emb, [-1, hidden_units]) # [B*Ads, H]
+    ads_din = tf.concat([user_items_cates_att_wrt_ads, ads_items_cates_emb, 
+                              user_items_cates_att_wrt_ads * ads_items_cates_emb], axis=-1) # [B*Ads, 3H]
     ads_din = tf.layers.batch_normalization(inputs=ads_din, name='b1', reuse=True)
+    
     ads_din_layer_1 = tf.layers.dense(ads_din, 80, activation=tf.nn.sigmoid, name='f1', reuse=True) # [B*Ads, 80]
     # ads_din_layer_1 = dice(ads_din, name='dice_1_sub')
     ads_din_layer_2 = tf.layers.dense(ads_din_layer_1, 40, activation=tf.nn.sigmoid, name='f2', reuse=True) # [B*Ads, 40]
@@ -271,9 +271,10 @@ def attention_multi_items(queries, keys, keys_length):
 
   # Scale
   outputs = outputs / (keys.get_shape().as_list()[-1] ** 0.5)
+
   # Activation
   outputs = tf.nn.softmax(outputs)  # [B, N, 1, T]
-  outputs = tf.reshape(outputs, [-1, 1, max_len]) # [B*N, 1, T]
+  outputs = tf.reshape(outputs, [-1, 1, max_len]) # [BN, 1, T]
 
   keys = tf.reshape(keys, [-1, max_len, queries_hidden_units]) # [BN, T, H]
   # Weighted sum

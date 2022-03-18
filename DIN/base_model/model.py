@@ -38,8 +38,7 @@ class Model(object):
 
     user_emb_w = tf.get_variable("user_emb_w", [user_count, hidden_units]) # [U, H]
     item_emb_w = tf.get_variable("item_emb_w", [item_count, hidden_units // 2]) # [I, H/2]
-    item_b = tf.get_variable("item_b", [item_count],  # [I]
-                             initializer=tf.constant_initializer(0.0))
+    item_b = tf.get_variable("item_b", [item_count], initializer=tf.constant_initializer(0.0)) # [I]
     cate_emb_w = tf.get_variable("cate_emb_w", [cate_count, hidden_units // 2])  # [C, H/2]
     cate_list = tf.convert_to_tensor(cate_list, dtype=tf.int64) # [I]
 
@@ -65,7 +64,7 @@ class Model(object):
         tf.nn.embedding_lookup(cate_emb_w, hc), # [B, T, H/2]
         ], axis=2)
 
-    #-- sum begin -------
+    #-- sum pooling of user behavior -------
     mask = tf.sequence_mask(self.sl, tf.shape(h_emb)[1], dtype=tf.float32) # [B, T]
     mask = tf.expand_dims(mask, -1) # [B, T, 1]
     mask = tf.tile(mask, [1, 1, tf.shape(h_emb)[2]]) # [B, T, H]
@@ -78,27 +77,27 @@ class Model(object):
     hist = tf.layers.batch_normalization(inputs = hist)
     hist = tf.reshape(hist, [-1, hidden_units]) # [B, H]
     hist = tf.layers.dense(hist, hidden_units) # [B, H]
-
     u_emb = hist
+
     #-- fcn begin -------
     din_i = tf.concat([u_emb, i_emb], axis=-1) # [B, 2H]
     din_i = tf.layers.batch_normalization(inputs=din_i, name='b1')
     d_layer_1_i = tf.layers.dense(din_i, 80, activation=tf.nn.sigmoid, name='f1') # [B, 80]
     d_layer_2_i = tf.layers.dense(d_layer_1_i, 40, activation=tf.nn.sigmoid, name='f2') # [B, 40]
     d_layer_3_i = tf.layers.dense(d_layer_2_i, 1, activation=None, name='f3') # [B, 1]
-    
+    d_layer_3_i = tf.reshape(d_layer_3_i, [-1]) # [B]
+
     din_j = tf.concat([u_emb, j_emb], axis=-1) # [B, 2H]
     din_j = tf.layers.batch_normalization(inputs=din_j, name='b1', reuse=True)
     d_layer_1_j = tf.layers.dense(din_j, 80, activation=tf.nn.sigmoid, name='f1', reuse=True)
     d_layer_2_j = tf.layers.dense(d_layer_1_j, 40, activation=tf.nn.sigmoid, name='f2', reuse=True)
     d_layer_3_j = tf.layers.dense(d_layer_2_j, 1, activation=None, name='f3', reuse=True)
-    
-    d_layer_3_i = tf.reshape(d_layer_3_i, [-1]) # [B]
     d_layer_3_j = tf.reshape(d_layer_3_j, [-1]) # [B]
 
     x = i_b - j_b + d_layer_3_i - d_layer_3_j # [B]
     self.logits = i_b + d_layer_3_i
-    
+
+
     u_emb_all = tf.expand_dims(u_emb, 1) # [B, 1, H]
     u_emb_all = tf.tile(u_emb_all, [1, item_count, 1]) # [B, I, H]
     
