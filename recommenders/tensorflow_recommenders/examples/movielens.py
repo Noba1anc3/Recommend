@@ -29,7 +29,7 @@ def evaluate(user_model: tf.keras.Model,
              test: tf.data.Dataset,
              movies: tf.data.Dataset,
              train: Optional[tf.data.Dataset] = None,
-             k: int = 10) -> Dict[Text, float]:
+             k: int = 10) -> Dict[Text, float]: # Text == str in python3
   """Evaluates a Movielens model on the supplied datasets.
 
   Args:
@@ -37,8 +37,7 @@ def evaluate(user_model: tf.keras.Model,
     movie_model: Movie representation model.
     test: Test dataset.
     movies: Dataset of movies.
-    train: Training dataset. If supplied, recommendations for training watches
-      will be removed.
+    train: Training dataset. If supplied, recommendations for training watches will be removed.
     k: The cutoff value at which to compute precision and recall.
 
   Returns:
@@ -48,8 +47,10 @@ def evaluate(user_model: tf.keras.Model,
   movie_ids = np.concatenate(
       list(movies.batch(1000).map(lambda x: x["movie_id"]).as_numpy_iterator()))
 
+  # movie_id : movie_id_from_zero
   movie_vocabulary = dict(zip(movie_ids.tolist(), range(len(movie_ids))))
 
+  # {user_id_1, user_id_2: [movie_id_1, movie_id_2], user_id_3}
   train_user_to_movies = collections.defaultdict(lambda: array.array("i"))
   test_user_to_movies = collections.defaultdict(lambda: array.array("i"))
 
@@ -65,9 +66,12 @@ def evaluate(user_model: tf.keras.Model,
     test_user_to_movies[user_id].append(movie_id)
 
   movie_embeddings = np.concatenate(
-      list(movies.batch(4096).map(
-          lambda x: movie_model({"movie_id": x["movie_id"]})
-      ).as_numpy_iterator()))
+    list(
+      movies.batch(4096).map(
+        lambda x: movie_model({"movie_id": x["movie_id"]})
+      ).as_numpy_iterator()
+    )
+  )
 
   precision_values = []
   recall_values = []
@@ -105,6 +109,7 @@ def _sample_list(
     random_state: Optional[np.random.RandomState] = None,
 ) -> Tuple[tf.Tensor, tf.Tensor]:
   """Function for sampling a list example from given feature lists."""
+  
   if random_state is None:
     random_state = np.random.RandomState()
 
@@ -113,17 +118,12 @@ def _sample_list(
       size=num_examples_per_list,
       replace=False,
   )
-  sampled_movie_titles = [
-      feature_lists["movie_title"][idx] for idx in sampled_indices
-  ]
-  sampled_ratings = [
-      feature_lists["user_rating"][idx]
-      for idx in sampled_indices
-  ]
+  sampled_movie_titles = [feature_lists["movie_title"][idx] for idx in sampled_indices]
+  sampled_ratings = [feature_lists["user_rating"][idx] for idx in sampled_indices]
 
   return (
-      tf.concat(sampled_movie_titles, 0),
-      tf.concat(sampled_ratings, 0),
+    tf.concat(sampled_movie_titles, 0),
+    tf.concat(sampled_ratings, 0),
   )
 
 
@@ -151,13 +151,15 @@ def sample_listwise(
   Returns:
       A tf.data.Dataset containing list examples.
 
-      Each example contains three keys: "user_id", "movie_title", and
-      "user_rating". "user_id" maps to a string tensor that represents the user
-      id for the example. "movie_title" maps to a tensor of shape
-      [sum(num_example_per_list)] with dtype tf.string. It represents the list
-      of candidate movie ids. "user_rating" maps to a tensor of shape
-      [sum(num_example_per_list)] with dtype tf.float32. It represents the
-      rating of each movie in the candidate list.
+      Each example contains three keys: "user_id", "movie_title", and "user_rating". 
+      
+      "user_id" maps to a string tensor that represents the user id for the example. 
+      
+      "movie_title" maps to a tensor of shape [sum(num_example_per_list)] 
+      with dtype tf.string. It represents the list of candidate movie ids. 
+      
+      "user_rating" maps to a tensor of shape [sum(num_example_per_list)]
+      with dtype tf.float32. It represents the rating of each movie in the candidate list.
   """
   random_state = np.random.RandomState(seed)
 
@@ -176,11 +178,9 @@ def sample_listwise(
 
   for user_id, feature_lists in example_lists_by_user.items():
     for _ in range(num_list_per_user):
-
       # Drop the user if they don't have enough ratings.
       if len(feature_lists["movie_title"]) < num_examples_per_list:
         continue
-
       sampled_movie_titles, sampled_ratings = _sample_list(
           feature_lists,
           num_examples_per_list,

@@ -27,9 +27,8 @@ class ModelTest(tf.test.TestCase):
 
   def test_ranking_model(self):
     """Tests a simple ranking model."""
-
+    
     class Model(models.Model):
-
       def __init__(self):
         super().__init__()
         self._dense = tf.keras.layers.Dense(1)
@@ -127,13 +126,12 @@ class ModelTest(tf.test.TestCase):
 
         query_embeddings = self.query_model(query_features)
         candidate_embeddings = self.candidate_model(candidate_features)
-
-        pctr = self.ctr_model(
-            tf.concat([query_features, candidate_features], axis=1))
-
         retrieval_loss = self.retrieval_task(
             query_embeddings=query_embeddings,
             candidate_embeddings=candidate_embeddings)
+
+        pctr = self.ctr_model(
+            tf.concat([query_features, candidate_features], axis=1))
         ctr_loss = self.ctr_task(predictions=pctr, labels=clicks)
 
         return retrieval_loss + ctr_loss

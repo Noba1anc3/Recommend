@@ -51,34 +51,41 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
     """Initializes the task.
 
     Args:
-      loss: Loss function. Defaults to
-        `tf.keras.losses.CategoricalCrossentropy`.
-      metrics: Object for evaluating top-K metrics over a
-       corpus of candidates. These metrics measure how good the model is at
+      loss: Loss function. Defaults to `tf.keras.losses.CategoricalCrossentropy`.
+      
+      metrics: Object for evaluating top-K metrics over a corpus of candidates.
+       These metrics measure how good the model is at
        picking the true candidate out of all possible candidates in the system.
        Note, because the metrics range over the entire candidate set, they are
        usually much slower to compute. Consider setting `compute_metrics=False`
        during training to save the time in computing the metrics.
+      
       batch_metrics: Metrics measuring how good the model is at picking out the
        true candidate for a query from other candidates in the batch. For
        example, a batch AUC metric would measure the probability that the true
        candidate is scored higher than the other candidates in the batch.
+
       loss_metrics: List of Keras metrics used to summarize the loss.
+
       temperature: Temperature of the softmax.
+
       num_hard_negatives: If positive, the `num_hard_negatives` negative
         examples with largest logits are kept when computing cross-entropy loss.
         If larger than batch size or non-positive, all the negative examples are
         kept.
+
       remove_accidental_hits: When given
         enables removing accidental hits of examples used as negatives. An
         accidental hit is defined as a candidate that is used as an in-batch
         negative but has the same id with the positive candidate.
+      
       name: Optional task name.
     """
 
     super().__init__(name=name)
 
-    self._loss = loss if loss is not None else tf.keras.losses.CategoricalCrossentropy(
+    self._loss = loss if loss is not None else \
+      tf.keras.losses.CategoricalCrossentropy(
         from_logits=True, reduction=tf.keras.losses.Reduction.SUM)
 
     self._factorized_metrics = metrics
@@ -120,18 +127,22 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
     to other queries in the batch.
 
     Args:
-      query_embeddings: [num_queries, embedding_dim] tensor of query
-        representations.
-      candidate_embeddings: [num_queries, embedding_dim] tensor of candidate
-        representations.
+      query_embeddings: [num_queries, embedding_dim] tensor of query representations.
+
+      candidate_embeddings: [num_queries, embedding_dim] tensor of candidate representations.
+
       sample_weight: [num_queries] tensor of sample weights.
+
       candidate_sampling_probability: Optional tensor of candidate sampling
         probabilities. When given will be be used to correct the logits to
         reflect the sampling probability of negative candidates.
+
       candidate_ids: Optional tensor containing candidate ids. When given,
         factorized top-K evaluation will be id-based rather than score-based.
+
       compute_metrics: Whether to compute metrics. Set this to False
         during training for faster training.
+
       compute_batch_metrics: Whether to compute batch level metrics which
         includes both batch_metrics and loss_metrics.
     Returns:
@@ -182,13 +193,12 @@ class Retrieval(tf.keras.layers.Layer, base.Task):
               candidate_embeddings[:tf.shape(query_embeddings)[0]],
               true_candidate_ids=candidate_ids)
       )
+
     if compute_batch_metrics:
       for metric in self._batch_metrics:
         update_ops.append(metric.update_state(labels, scores))
-
       for metric in self._loss_metrics:
-        update_ops.append(
-            metric.update_state(loss, sample_weight=sample_weight))
+        update_ops.append(metric.update_state(loss, sample_weight=sample_weight))
 
     with tf.control_dependencies(update_ops):
       return tf.identity(loss)

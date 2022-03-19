@@ -23,9 +23,7 @@ from tensorflow_recommenders.tasks import ranking
 
 
 class RankingTest(tf.test.TestCase):
-
   def test_task(self):
-
     task = ranking.Ranking(
         metrics=[tf.keras.metrics.BinaryAccuracy(name="accuracy")],
         label_metrics=[tf.keras.metrics.Mean(name="label_mean")],

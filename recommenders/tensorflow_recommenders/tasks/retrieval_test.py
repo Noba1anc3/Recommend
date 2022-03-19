@@ -29,7 +29,6 @@ def _sigmoid(x):
 class RetrievalTest(tf.test.TestCase):
 
   def test_task(self):
-
     query = tf.constant([[1, 2, 3], [2, 3, 4]], dtype=tf.float32)
     candidate = tf.constant([[1, 1, 1], [1, 1, 0]], dtype=tf.float32)
     candidate_dataset = tf.data.Dataset.from_tensor_slices(
@@ -48,11 +47,11 @@ class RetrievalTest(tf.test.TestCase):
     # All_pair_scores: [[6, 3], [9, 5]].
     # Normalized logits: [[3, 0], [4, 0]].
     expected_loss = -np.log(_sigmoid(3.0)) - np.log(1 - _sigmoid(4.0))
-
     expected_metrics = {
         "factorized_top_k/top_5_categorical_accuracy": 1.0,
         "batch_categorical_accuracy_at_1": 0.5,
     }
+    
     loss = task(query_embeddings=query, candidate_embeddings=candidate)
     metrics_ = {
         metric.name: metric.result().numpy() for metric in task.metrics
