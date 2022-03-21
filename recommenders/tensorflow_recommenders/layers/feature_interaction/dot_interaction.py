@@ -1,17 +1,3 @@
-# Copyright 2022 The TensorFlow Recommenders Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Implements `Dot Interaction` Layer of DLRM model."""
 
 from typing import List, Optional
@@ -26,7 +12,7 @@ class DotInteraction(tf.keras.layers.Layer):
   section 2.1.3. Sparse activations and dense activations are combined.
   Dot interaction is applied to a batch of input Tensors [e1,...,e_k] of the
   same dimension and the output is a batch of Tensors with all distinct pairwise
-  dot products of the form dot(e_i, e_j) for i <= j if self self_interaction is
+  dot products of the form dot(e_i, e_j) for i <= j if self_interaction is
   True, otherwise dot(e_i, e_j) i < j.
 
   Attributes:
@@ -81,6 +67,7 @@ class DotInteraction(tf.keras.layers.Layer):
     # Interact features, select lower-triangular portion, and re-shape.
     xactions = tf.matmul(concat_features, concat_features, transpose_b=True)
     ones = tf.ones_like(xactions)
+    
     if self._self_interaction:
       # Selecting lower-triangular portion including the diagonal.
       lower_tri_mask = tf.linalg.band_part(ones, -1, 0)
@@ -100,5 +87,7 @@ class DotInteraction(tf.keras.layers.Layer):
       out_dim = num_features * num_features
     else:
       activations = tf.boolean_mask(xactions, lower_tri_mask)
+
     activations = tf.reshape(activations, (batch_size, out_dim))
+
     return activations

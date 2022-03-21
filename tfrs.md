@@ -158,3 +158,53 @@ tf.linalg.matmul(a, b, transpose_a=False, transpose_b=True)
 
 
 
+## layers
+
+### MLP
+
+```python
+tf.keras.layers.Dense(num_units, activation=activation, use_bias=use_bias)
+```
+
+### Cross
+
+```python
+tf.keras.initializers.Initializer
+tf.keras.regularizers.Regularizer
+tf.keras.initializers.get(kernel_initializer)
+tf.keras.regularizers.get(kernel_regularizer)
+list(Dict.items()) # Dict -> List
+
+# dcn_test
+np.asarray([[0.1, 0.2, 0.3]]).astype(np.float32)
+np.random.uniform(size=(10, 13))
+tf.keras.models.load_model(path)
+model.predict(random_input)
+```
+
+### DocInteraction
+
+```python
+xactions = tf.matmul(concat_features, concat_features, transpose_b=True)
+
+# 以对角线为中心，取它的副对角线部分，其他部分用0填充
+# num_lower:下三角矩阵保留的副对角线数量，取值为负数时，则全部保留。
+# num_upper:上三角矩阵保留的副对角线数量，取值为负数时，则全部保留。
+lower_tri_mask = tf.linalg.band_part(ones, -1, 0)
+upper_tri_mask = tf.linalg.band_part(ones, 0, -1)
+
+activations = tf.boolean_mask(xactions, lower_tri_mask)
+activations = tf.where(condition=tf.cast(upper_tri_mask, tf.bool),x=tf.zeros_like(xactions),y=xactions)
+```
+
+## tutorials
+
+### intermediate
+
+#### dcn
+
+```python
+rng = np.random.RandomState(random_seed)
+country = rng.randint(200, size=[data_size, 1]) / 200.
+```
+

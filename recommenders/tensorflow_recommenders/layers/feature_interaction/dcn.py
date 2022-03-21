@@ -1,17 +1,3 @@
-# Copyright 2022 The TensorFlow Recommenders Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """Implements `Cross` Layer, the cross layer in Deep & Cross Network (DCN)."""
 
 from typing import Union, Text, Optional
@@ -100,8 +86,8 @@ class Cross(tf.keras.layers.Layer):
     self._bias_initializer = tf.keras.initializers.get(bias_initializer)
     self._kernel_regularizer = tf.keras.regularizers.get(kernel_regularizer)
     self._bias_regularizer = tf.keras.regularizers.get(bias_regularizer)
-    self._input_dim = None
 
+    self._input_dim = None
     self._supports_masking = True
 
     if self._diag_scale < 0:  # pytype: disable=unsupported-operands
