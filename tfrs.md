@@ -197,6 +197,23 @@ activations = tf.boolean_mask(xactions, lower_tri_mask)
 activations = tf.where(condition=tf.cast(upper_tri_mask, tf.bool),x=tf.zeros_like(xactions),y=xactions)
 ```
 
+## loss
+
+### SamplingProbabilityCorrection
+
+```python
+tf.clip_by_value(candidate_sampling_probability, 1e-6, 1.)
+```
+
+### RemoveAccidentalHits
+
+```python
+candidate_ids = tf.expand_dims(candidate_ids, 1)
+positive_indices = tf.math.argmax(labels, axis=1)
+```
+
+
+
 ## tutorials
 
 ### intermediate
@@ -207,4 +224,25 @@ activations = tf.where(condition=tf.cast(upper_tri_mask, tf.bool),x=tf.zeros_lik
 rng = np.random.RandomState(random_seed)
 country = rng.randint(200, size=[data_size, 1]) / 200.
 ```
+
+#### efficient_serving
+
+```python
+np.intersect1d(truth, approx)
+```
+
+#### listwise_ranking
+
+```python
+user_embedding_repeated = tf.repeat(
+    tf.expand_dims(user_embeddings, 1), [list_length], axis=1)
+predictions=tf.squeeze(scores, axis=-1)
+tf.keras.losses.MeanSquaredError()
+tfr.keras.losses.PairwiseHingeLoss()
+tfr.keras.losses.ListMLELoss()
+tf.keras.metrics.RootMeanSquaredError()
+tfr.keras.metrics.NDCGMetric(name="ndcg_metric")
+```
+
+
 
